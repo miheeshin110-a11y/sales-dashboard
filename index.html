@@ -315,7 +315,7 @@ tr:last-child td{border-bottom:none}
           <div class="ct" style="margin:0" id="sell-detail-title">세부내역</div>
           <button onclick="closeSellDetail()" style="font-size:11px;padding:3px 10px;border:0.5px solid var(--bd);border-radius:6px;background:none;cursor:pointer;color:var(--tx2);font-family:var(--font)"><i class="ti ti-x" aria-hidden="true"></i> 닫기</button>
         </div>
-        <div style="overflow-x:auto"><table id="tb-sell-detail"></table></div>
+        <div id="tb-sell-detail"></div>
       </div>
     </div>
     <!-- ⑤ 가마감 비교 -->
@@ -1082,44 +1082,116 @@ function renderSell(){
 
 function openSellDetail(acct, month){
   const card = document.getElementById('sell-detail-card');
-  const months = month ? [month] : getMonths();
-
-  // SELL_DETAIL에서 해당 계정과목 데이터 가져오기
-  const items = SELL_DETAIL.filter(d=>d.acct===acct && (!month||d.month===month));
+  const months = getMonths();
+  const filterMos = month ? [month] : months.filter(m=>{
+    const hasSell = SELL_RAW&&SELL_RAW.length>0;
+    if(hasSell) return SELL_RAW.some(d=>d.acct===acct&&d.month===m);
+    return true;
+  });
 
   document.getElementById('sell-detail-title').textContent =
     (month?month+' ':'')+acct+' — 거래내역';
   card.style.display='';
 
-  let h=`<thead><tr>
-    <th>월</th><th>날짜</th><th>거래처</th>
-    <th style="text-align:right">금액</th><th>내역</th>
-  </tr></thead><tbody>`;
+  // 월별 데이터 + 신규 거래처 감지
+  const byMo = {};
+  const allVendors = {}; // {vendor: [months]}
 
-  if(items.length>0){
-    const byMo={};
-    items.forEach(d=>{if(!byMo[d.month])byMo[d.month]=[];byMo[d.month].push(d);});
-    Object.keys(byMo).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(m=>{
-      const moSum=byMo[m].reduce((s,d)=>s+Math.abs(d.amount),0);
-      h+=`<tr class="tr-head"><td colspan="5">${m} — ${byMo[m].length}건 합계 ${fmt(moSum)}</td></tr>`;
-      byMo[m].forEach(d=>{
-        h+=`<tr>
-          <td style="font-size:11px;color:var(--tx2)">${d.month}</td>
-          <td style="font-size:11px">${d.date||'—'}</td>
-          <td style="font-size:11px">${d.vendor||'—'}</td>
-          <td style="text-align:right;font-size:11px" class="${d.amount<0?'neg':''}">${fmt(Math.abs(d.amount))}</td>
-          <td style="font-size:11px;color:var(--tx2)">${d.detail||'—'}</td>
+  if(SELL_DETAIL && SELL_DETAIL.length > 0){
+    const items = SELL_DETAIL.filter(d=>d.acct===acct&&(!month||d.month===month));
+    items.forEach(d=>{
+      if(!byMo[d.month]) byMo[d.month]=[];
+      byMo[d.month].push(d);
+      if(!allVendors[d.vendor]) allVendors[d.vendor]=[];
+      if(!allVendors[d.vendor].includes(d.month)) allVendors[d.vendor].push(d.month);
+    });
+  }
+
+  const hasMoData = Object.keys(byMo).length > 0;
+
+  let h = '';
+
+  if(hasMoData){
+    const sortedMos = Object.keys(byMo).sort((a,b)=>parseInt(a)-parseInt(b));
+
+    sortedMos.forEach((m,idx)=>{
+      const rows = byMo[m];
+      const moSum = rows.reduce((s,d)=>s+Math.abs(d.amount||0),0);
+      const prevMoVendors = idx>0
+        ? new Set((byMo[sortedMos[idx-1]]||[]).map(d=>d.vendor))
+        : new Set();
+
+      // 신규 거래처 감지 (전월에 없던 거래처)
+      const newVendors = new Set(
+        rows.map(d=>d.vendor).filter(v=>idx>0&&!prevMoVendors.has(v))
+      );
+
+      const moId = 'mo-sec-'+m.replace(/[^0-9]/g,'');
+      h += `<div style="border:0.5px solid var(--bd);border-radius:8px;margin-bottom:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);cursor:pointer"
+             onclick="toggleMoSec('${moId}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500">${m}</span>
+            <span style="font-size:11px;color:var(--tx2)">${rows.length}건</span>
+            ${newVendors.size>0?`<span style="font-size:10px;background:#FAEEDA;color:#633806;padding:1px 7px;border-radius:10px;font-weight:500">신규 ${newVendors.size}건</span>`:''}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:12px;font-weight:500;color:var(--tx)">${fmt(moSum)}</span>
+            <i class="ti ti-chevron-down" id="${moId}-icon" style="font-size:13px;color:var(--tx2);transition:transform .2s" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div id="${moId}" style="display:none">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr>
+              <th style="text-align:left;padding:5px 12px;font-size:10px;color:var(--tx2);font-weight:400;text-transform:uppercase;border-bottom:0.5px solid var(--bd)">거래처</th>
+              <th style="text-align:right;padding:5px 12px;font-size:10px;color:var(--tx2);font-weight:400;text-transform:uppercase;border-bottom:0.5px solid var(--bd)">금액</th>
+              <th style="text-align:left;padding:5px 12px;font-size:10px;color:var(--tx2);font-weight:400;text-transform:uppercase;border-bottom:0.5px solid var(--bd)">내역</th>
+            </tr></thead>
+            <tbody>`;
+
+      // 신규 거래처 먼저, 기존 거래처 다음
+      const sortedRows = [...rows].sort((a,b)=>{
+        const aNew = newVendors.has(a.vendor)?0:1;
+        const bNew = newVendors.has(b.vendor)?0:1;
+        return aNew-bNew || Math.abs(b.amount||0)-Math.abs(a.amount||0);
+      });
+
+      sortedRows.forEach((d,ri)=>{
+        const isNew = newVendors.has(d.vendor);
+        const isLast = ri===sortedRows.length-1;
+        h += `<tr style="${isLast?'':'border-bottom:0.5px solid var(--bd);'}${isNew?'background:#FAEEDA22;':''}">
+          <td style="padding:6px 12px;font-size:11px;font-weight:${isNew?'500':'400'}">
+            ${isNew?`<span style="font-size:9px;background:#BA7517;color:#fff;padding:1px 5px;border-radius:3px;margin-right:5px;font-weight:500">NEW</span>`:''}${d.vendor||'—'}
+          </td>
+          <td style="padding:6px 12px;font-size:11px;text-align:right;color:var(--red)">${fmt(Math.abs(d.amount||0))}</td>
+          <td style="padding:6px 12px;font-size:11px;color:var(--tx2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.detail||''}">${d.detail||'—'}</td>
         </tr>`;
       });
+
+      h += `</tbody></table></div></div>`;
     });
+
+    // 첫 번째 월은 기본으로 열기
+    const firstMoId = 'mo-sec-'+sortedMos[0].replace(/[^0-9]/g,'');
+    h += `<script>setTimeout(()=>toggleMoSec('${firstMoId}'),50)<\/script>`;
+
   } else {
-    h+=`<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--tx2);font-size:12px">
+    h = `<div style="padding:16px;text-align:center;color:var(--tx2);font-size:12px">
       구글 시트 판관비_세부 탭 연동 후 건별 내역이 표시됩니다
-    </td></tr>`;
+    </div>`;
   }
-  h+='</tbody>';
-  document.getElementById('tb-sell-detail').innerHTML=h;
+
+  document.getElementById('tb-sell-detail').innerHTML = h;
   card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function toggleMoSec(id){
+  const el = document.getElementById(id);
+  const icon = document.getElementById(id+'-icon');
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : '';
+  if(icon) icon.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
 function closeSellDetail(){
