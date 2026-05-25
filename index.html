@@ -631,13 +631,33 @@ async function loadData(){
     document.getElementById('data-status').textContent='연동 완료';
     renderAll();
   }catch(e){
+    console.error('loadData 전체 오류:', e);
     document.getElementById('status-dot').style.background='var(--red)';
     document.getElementById('status-text').textContent='연동 실패';
     document.getElementById('data-status').textContent='⚠ '+e.message;
+    // 에러 상세 표시
+    ['tab-ov','tab-media','tab-matrix','tab-sell','tab-compare'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el && el.innerHTML.trim()==='') el.innerHTML=`<div style="padding:20px;color:var(--red);font-size:12px">오류: ${e.message}<br><br>브라우저 개발자도구(F12) > Console 탭에서 상세 오류를 확인하세요.</div>`;
+    });
   }
 }
 
-function renderAll(){renderOv();renderForecast();if(curTab==='media')renderCat();else if(curTab==='matrix')renderMatrix();else if(curTab==='sell')renderSell();else if(curTab==='compare')renderCompare();}
+function renderAll(){
+  try{
+    renderOv();
+    renderForecast();
+    if(curTab==='media')renderCat();
+    else if(curTab==='matrix')renderMatrix();
+    else if(curTab==='sell')renderSell();
+    else if(curTab==='compare')renderCompare();
+  }catch(renderErr){
+    console.error('renderAll 오류:', renderErr);
+    document.getElementById('status-dot').style.background='var(--red)';
+    document.getElementById('status-text').textContent='연동 실패';
+    document.getElementById('data-status').textContent='⚠ 렌더링오류: '+renderErr.message;
+  }
+}
 
 // ── ① 전체 월별 ──────────────────────────────────────
 function renderOv(){
