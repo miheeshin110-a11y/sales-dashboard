@@ -584,24 +584,37 @@ function showTab(name,el){
 async function fetchOne(type){
   const url=APPS_SCRIPT_URL+'?type='+type+'&t='+Date.now();
   const res=await fetch(url);
+  if(!res.ok) throw new Error(type+' HTTP오류: '+res.status);
   const data=await res.json();
-  if(data.error) throw new Error(type+' 오류: '+data.error);
+  // 배열이면 그대로, 객체면 error 체크
+  if(Array.isArray(data)) return data;
+  if(data && data.error) throw new Error(type+' 오류: '+data.error);
   return data;
 }
 
 async function loadData(){
   try{
-    // 4개 병렬 호출
-    const [confirmed,daily,selling,selling_detail]=await Promise.all([
+    // confirmed, daily 먼저 로드 (필수)
+    const [confirmed,daily]=await Promise.all([
       fetchOne('confirmed'),
       fetchOne('daily'),
-      fetchOne('selling'),
-      fetchOne('selling_detail'),
     ]);
     RAW=(confirmed||[]).map(r=>({month:r.month,media:normCat(r.media),client:r.client,rev:r.rev||0,buy:r.buy||0,ad:r.ad||0,ppl:r.ppl||0,rg:r.rg||0})).map(nc);
     DAILY=daily||[];
-    SELL_RAW=selling||[];
-    SELL_DETAIL=selling_detail||[];
+
+    // selling, selling_detail 별도 로드 (실패해도 계속 진행)
+    try{
+      const [selling,selling_detail]=await Promise.all([
+        fetchOne('selling'),
+        fetchOne('selling_detail'),
+      ]);
+      SELL_RAW=selling||[];
+      SELL_DETAIL=selling_detail||[];
+    }catch(sellErr){
+      console.warn('판관비 데이터 로드 실패(무시):', sellErr.message);
+      SELL_RAW=[];SELL_DETAIL=[];
+    }
+
     const data={updated:new Date().toISOString()};
     const months=getMonths();
     selMo=new Set(months);
