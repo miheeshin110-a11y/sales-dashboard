@@ -296,27 +296,30 @@ tr:last-child td{border-bottom:none}
     <div class="sec" id="tab-sell">
       <div class="kg" id="kpi-sell"></div>
       <div class="ins" id="ins-sell"></div>
-      <div class="two">
-        <div class="card"><div class="ct">월별 판관비 vs 매체 영업이익</div>
-          <div class="leg" id="leg-sell1"></div>
-          <div style="position:relative;height:190px"><canvas id="ch-sell1" role="img" aria-label="판관비 vs 매체영업이익">판관비 비교</canvas></div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="ct" style="margin:0">계정과목별 월별 추이 (평균 대비 이상치 표시)</div>
+          <div style="display:flex;gap:4px">
+            <button class="ctab on" onclick="setSellChartMode('abs',this)">금액</button>
+            <button class="ctab" onclick="setSellChartMode('idx',this)">지수(평균=100)</button>
+          </div>
         </div>
-        <div class="card"><div class="ct">종합 차감 항목 구성</div>
-          <div class="leg" id="leg-sell2"></div>
-          <div style="position:relative;height:160px"><canvas id="ch-sell2" role="img" aria-label="차감 구성">항목 구성</canvas></div>
-        </div>
+        <div class="leg" id="leg-sell-acct"></div>
+        <div style="position:relative;height:220px"><canvas id="ch-sell-acct" role="img" aria-label="계정과목별 월별 추이">계정과목 추이</canvas></div>
       </div>
-      <div class="card"><div class="ct">월별 종합 차감 내역</div><div style="overflow-x:auto"><table id="tb-sell"></table></div></div>
-  <!-- 계정과목별 상세 -->
-  <div class="card" id="sell-detail-card" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="ct" style="margin:0" id="sell-detail-title">계정과목 상세</div>
-      <button onclick="closeSellDetail()" style="font-size:11px;padding:3px 10px;display:flex;align-items:center;gap:4px"><i class="ti ti-x"></i> 닫기</button>
+      <div id="sell-anomaly-box"></div>
+      <div class="card">
+        <div class="ct">계정과목 × 월별 비교표 — 행 클릭 시 세부내역 · 평균 대비 ±20% 이상 강조</div>
+        <div style="overflow-x:auto"><table id="tb-sell-acct"></table></div>
+      </div>
+      <div class="card" id="sell-detail-card" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="ct" style="margin:0" id="sell-detail-title">계정과목 세부내역</div>
+          <button onclick="closeSellDetail()" style="font-size:11px;padding:3px 10px;display:flex;align-items:center;gap:4px"><i class="ti ti-x"></i> 닫기</button>
+        </div>
+        <div style="overflow-x:auto"><table id="tb-sell-detail"></table></div>
+      </div>
     </div>
-    <div style="overflow-x:auto"><table id="tb-sell-detail"></table></div>
-  </div>
-    </div>
-
     <!-- ⑤ 가마감 비교 -->
     <div class="sec" id="tab-compare">
       <div class="info-box"><i class="ti ti-info-circle" style="font-size:13px;vertical-align:middle;margin-right:5px" aria-hidden="true"></i>두 마감 모두 <strong>매출 − 원가(매입+택배비+러닝개런티) − 광고비 − PPL − 판관비</strong> 동일 구조. 차이는 집계 기준 차이에서 발생.</div>
@@ -947,51 +950,192 @@ function toggleMo(m){if(selMo.has(m))selMo.delete(m);else selMo.add(m);renderMat
 
 // ── ④ 판관비 ─────────────────────────────────────────
 function renderSell(){
-  const months=getMonths();
-  const SELL_ITEMS=['판관비','택배비','개런티','샘플개런티','샘플'];
-  const SELL_C=['#D85A30','#BA7517','#9477e4','#888780','#D4537E'];
-  const totSell=months.reduce((s,m)=>{const sy=SYNTH[m];return sy?s+Math.abs(sy.판관비)+Math.abs(sy.택배비||0):s},0);
-  const totEtc=months.reduce((s,m)=>{const sy=SYNTH[m];return sy?s+Math.abs(sy.개런티)+Math.abs(sy.샘플개런티)+Math.abs(sy.샘플):s},0);
-  const totAll=totSell+totEtc;
-  document.getElementById('kpi-sell').innerHTML=`
-    <div class="kpi"><div class="kl">누적 판관비+택배비</div><div class="kv">${fmtM(totSell)}</div></div>
-    <div class="kpi"><div class="kl">누적 개런티·샘플</div><div class="kv">${fmtM(totEtc)}</div></div>
-    <div class="kpi"><div class="kl">종합 차감 합계</div><div class="kv neg">-${fmtM(totAll)}</div></div>
-    <div class="kpi"><div class="kl">월평균 차감</div><div class="kv neg">-${fmtM(totAll/months.length)}</div></div>`;
-  document.getElementById('ins-sell').innerHTML=`
-    <div class="it"><i class="ti ti-bulb" aria-hidden="true"></i> 핵심 요점</div>
-    <ul class="il">
-      <li>판관비+택배비 ${pct(totSell/totAll*100)} — 고정비 구조로 매출 증가가 수익성에 직결</li>
-      <li>개런티·샘플 비용 ${fmtM(totEtc)} — 방송 채널 계약 조건 재검토 필요</li>
-    </ul>`;
-  document.getElementById('leg-sell1').innerHTML=`
-    <span><span class="ldot" style="background:#D85A3066;border:0.5px solid #D85A30"></span>판관비+택배비</span>
-    <span><span class="ldot" style="background:#378ADD"></span>매체영업이익(꺾은선)</span>`;
-  const sellD=months.map(m=>{const sy=SYNTH[m];return sy?Math.round((Math.abs(sy.판관비)+Math.abs(sy.택배비||0))/1000000):0;});
-  const mpD=months.map(m=>Math.round(getMP(m)/1000000));
-  if(charts.s1)charts.s1.destroy();
-  charts.s1=new Chart(document.getElementById('ch-sell1'),{type:'bar',data:{labels:months,datasets:[
-    {type:'bar',data:sellD,backgroundColor:'#D85A3066',borderColor:'#D85A30',borderWidth:1,label:'판관비'},
-    {type:'line',data:mpD,borderColor:'#378ADD',backgroundColor:'transparent',tension:0.3,pointRadius:4,borderDash:[5,3],label:'매체영업이익'},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'백만',font:{size:10}}},x:{ticks:{font:{size:10},autoSkip:false}}}}});
-  const totByItem=SELL_ITEMS.map(it=>Math.abs(months.reduce((s,m)=>{const sy=SYNTH[m];return sy?s+(sy[it]||0):s},0)));
-  document.getElementById('leg-sell2').innerHTML=SELL_ITEMS.map((it,i)=>`<span><span class="ldot" style="background:${SELL_C[i]}"></span>${it} ${fmtM(totByItem[i])}</span>`).join('');
-  if(charts.s2)charts.s2.destroy();
-  charts.s2=new Chart(document.getElementById('ch-sell2'),{type:'doughnut',data:{labels:SELL_ITEMS,datasets:[{data:totByItem,backgroundColor:SELL_C,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'55%'}});
-  const tSell=document.getElementById('tb-sell');
-  let h=`<thead><tr><th>항목</th>${months.map(m=>`<th style="text-align:right;font-size:10px">${m}</th>`).join('')}<th style="text-align:right;font-size:10px">합계</th></tr></thead><tbody>`;
-  SELL_ITEMS.forEach((it,i)=>{
-    h+=`<tr class="cr" onclick="openSellDetail('${it}')" title="클릭 시 세부내역"><td style="font-weight:500;font-size:12px;color:${SELL_C[i]};display:flex;align-items:center;gap:5px">${it}<i class='ti ti-chevron-right' style='font-size:11px;color:var(--tx3)'></i></td>`;
-    let tot=0;
-    months.forEach(m=>{const sy=SYNTH[m];const v=sy?Math.round(sy[it]||0):0;tot+=v;h+=`<td style="text-align:right;font-size:11px" class="${v<0?'neg':''}">${v?fmt(v):'—'}</td>`;});
-    h+=`<td style="text-align:right;font-size:11px;font-weight:500" class="${tot<0?'neg':''}">${fmt(tot)}</td></tr>`;
+  const months = getMonths();
+  if(months.length === 0) return;
+
+  // SELL_RAW에서 계정과목별 월별 집계
+  // SELL_RAW: [{month, acct, amount, note}]
+  // SYNTH를 fallback으로 사용
+  const hasSellData = SELL_RAW && SELL_RAW.length > 0;
+
+  // 계정과목 목록
+  let accts = [];
+  let sellByAcctMo = {}; // {acct: {월: amount}}
+
+  if(hasSellData){
+    SELL_RAW.forEach(r=>{
+      if(!sellByAcctMo[r.acct]) sellByAcctMo[r.acct] = {};
+      sellByAcctMo[r.acct][r.month] = (sellByAcctMo[r.acct][r.month]||0) + Math.abs(r.amount);
+    });
+    accts = Object.keys(sellByAcctMo).filter(a=>months.some(m=>sellByAcctMo[a][m]>0));
+  } else {
+    // fallback: SYNTH 데이터
+    const SELL_ITEMS = ['판관비','택배비','개런티','샘플개런티','샘플'];
+    SELL_ITEMS.forEach(it=>{
+      sellByAcctMo[it] = {};
+      months.forEach(m=>{
+        const sy = SYNTH[m];
+        if(sy && sy[it]) sellByAcctMo[it][m] = Math.abs(sy[it]||0);
+      });
+    });
+    accts = SELL_ITEMS.filter(it=>months.some(m=>sellByAcctMo[it][m]>0));
+  }
+
+  // 월별 합계
+  const moTotal = {};
+  months.forEach(m=>{
+    moTotal[m] = accts.reduce((s,a)=>s+(sellByAcctMo[a][m]||0),0);
   });
-  const grandTot=months.reduce((s,m)=>{const sy=SYNTH[m];return sy?s+Object.values(sy).reduce((a,v)=>a+v,0):s},0);
-  h+=`<tr class="tr-total"><td>합계</td>`;
-  months.forEach(m=>{const sy=SYNTH[m];const v=sy?Object.values(sy).reduce((a,v2)=>a+v2,0):0;h+=`<td style="text-align:right;font-size:11px" class="${v<0?'neg':''}">${fmt(v)}</td>`;});
-  h+=`<td style="text-align:right;font-size:11px" class="${grandTot<0?'neg':''}">${fmt(grandTot)}</td></tr></tbody>`;
-  tSell.innerHTML=h;
+  const grandTotal = Object.values(moTotal).reduce((s,v)=>s+v,0);
+  const avgMo = grandTotal / months.length;
+
+  // KPI
+  document.getElementById('kpi-sell').innerHTML = `
+    <div class="kpi"><div class="kl">누적 총 차감</div><div class="kv neg">-${fmtM(grandTotal)}</div></div>
+    <div class="kpi"><div class="kl">월평균 차감</div><div class="kv neg">-${fmtM(avgMo)}</div></div>
+    <div class="kpi"><div class="kl">계정과목 수</div><div class="kv">${accts.length}개</div></div>
+    <div class="kpi"><div class="kl">데이터 기준</div><div class="kv" style="font-size:13px">${hasSellData?'구글 시트':'내장 데이터'}</div></div>`;
+
+  // 상위 계정과목 색상
+  const SELL_COLORS = ['#D85A30','#378ADD','#1D9E75','#9477e4','#BA7517','#888780','#D4537E','#5B9BD5','#70AD47','#FF7F27'];
+  const topAccts = accts.slice().sort((a,b)=>{
+    const sa = months.reduce((s,m)=>s+(sellByAcctMo[a][m]||0),0);
+    const sb = months.reduce((s,m)=>s+(sellByAcctMo[b][m]||0),0);
+    return sb-sa;
+  }).slice(0,8);
+
+  // 이상치 감지 (각 계정과목의 월평균 대비 ±30% 초과)
+  const anomalies = [];
+  accts.forEach(a=>{
+    const vals = months.map(m=>sellByAcctMo[a][m]||0).filter(v=>v>0);
+    if(vals.length < 2) return;
+    const avg = vals.reduce((s,v)=>s+v,0)/vals.length;
+    months.forEach(m=>{
+      const v = sellByAcctMo[a][m]||0;
+      if(v === 0) return;
+      const ratio = v/avg;
+      if(ratio > 1.3 || ratio < 0.7){
+        anomalies.push({acct:a, month:m, amount:v, avg, ratio,
+          dir: ratio>1.3?'급증':'급감'});
+      }
+    });
+  });
+
+  // 이상치 박스
+  const anomalyBox = document.getElementById('sell-anomaly-box');
+  if(anomalies.length > 0){
+    anomalyBox.innerHTML = `<div class="card" style="border-left:3px solid var(--amber);margin-bottom:12px">
+      <div class="ct" style="color:var(--amber);margin-bottom:8px"><i class="ti ti-alert-triangle"></i> 평균 대비 이상치 감지 (${anomalies.length}건)</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${anomalies.map(an=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg2);border-radius:var(--r);font-size:11px;cursor:pointer" onclick="openSellDetail('${an.acct}')">
+            <span><strong>${an.month} ${an.acct}</strong> — ${an.dir}</span>
+            <span style="color:${an.dir==='급증'?'var(--red)':'var(--green)'}">
+              ${fmt(an.amount)} (평균 ${fmt(Math.round(an.avg))} 대비 ${an.ratio>1?'+':''}${Math.round((an.ratio-1)*100)}%)
+              <i class="ti ti-chevron-right" style="font-size:11px"></i>
+            </span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  } else {
+    anomalyBox.innerHTML = '';
+  }
+
+  // 인사이트
+  const biggestAcct = topAccts[0];
+  const biggestTotal = months.reduce((s,m)=>s+(sellByAcctMo[biggestAcct]?.[m]||0),0);
+  document.getElementById('ins-sell').innerHTML = `
+    <div class="it"><i class="ti ti-bulb"></i> 핵심 요점</div>
+    <ul class="il">
+      <li>최대 계정과목 <strong>${biggestAcct}</strong> — 누적 ${fmtM(biggestTotal)} (전체의 ${pct(biggestTotal/grandTotal*100)})</li>
+      <li>월평균 차감 ${fmtM(avgMo)} — 계정과목 행 클릭 시 건별 거래내역 확인 가능</li>
+      ${anomalies.length>0?`<li style="color:var(--amber)">이상치 ${anomalies.length}건 감지 — 위 박스에서 확인하세요</li>`:''}
+    </ul>`;
+
+  // 차트 (상위 계정과목 선택)
+  const chartAccts = topAccts.slice(0,6);
+  document.getElementById('leg-sell-acct').innerHTML = chartAccts.map((a,i)=>
+    `<span style="display:flex;align-items:center;gap:3px"><span class="ldot" style="background:${SELL_COLORS[i%SELL_COLORS.length]};border-radius:50%"></span>${a}</span>`
+  ).join('');
+
+  const datasets = chartAccts.map((a,i)=>({
+    label: a,
+    data: months.map(m=>Math.round((sellByAcctMo[a][m]||0)/1000000)),
+    borderColor: SELL_COLORS[i%SELL_COLORS.length],
+    backgroundColor: SELL_COLORS[i%SELL_COLORS.length]+'22',
+    fill: false, tension:0.3, pointRadius:4,
+  }));
+  if(charts.sellAcct) charts.sellAcct.destroy();
+  charts.sellAcct = new Chart(document.getElementById('ch-sell-acct'),{
+    type:'line',
+    data:{labels:months, datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>v+'백만',font:{size:10}}},x:{ticks:{font:{size:10},autoSkip:false}}}}
+  });
+
+  // 계정과목 × 월별 테이블
+  const tbl = document.getElementById('tb-sell-acct');
+  let h = `<thead><tr>
+    <th>계정과목</th>
+    ${months.map(m=>`<th style="text-align:right;font-size:10px">${m}</th>`).join('')}
+    <th style="text-align:right;font-size:10px">합계</th>
+    <th style="text-align:right;font-size:10px">월평균</th>
+  </tr></thead><tbody>`;
+
+  const sortedAccts = accts.slice().sort((a,b)=>{
+    const sa=months.reduce((s,m)=>s+(sellByAcctMo[a][m]||0),0);
+    const sb=months.reduce((s,m)=>s+(sellByAcctMo[b][m]||0),0);
+    return sb-sa;
+  });
+
+  sortedAccts.forEach(a=>{
+    const vals = months.map(m=>sellByAcctMo[a][m]||0);
+    const acctTotal = vals.reduce((s,v)=>s+v,0);
+    const acctAvg = vals.filter(v=>v>0).length>0 ? acctTotal/vals.filter(v=>v>0).length : 0;
+    if(acctTotal===0) return;
+
+    h += `<tr class="cr" onclick="openSellDetail('${a}')">
+      <td style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px">
+        ${a}<i class="ti ti-chevron-right" style="font-size:11px;color:var(--tx3)"></i>
+      </td>`;
+    months.forEach((m,idx)=>{
+      const v = sellByAcctMo[a][m]||0;
+      const ratio = acctAvg>0 ? v/acctAvg : 1;
+      let cellStyle = 'text-align:right;font-size:11px';
+      let badge = '';
+      if(v>0 && acctAvg>0){
+        if(ratio>1.3){
+          cellStyle += ';background:#FCEBEB33;border-radius:3px';
+          badge = `<span style="font-size:9px;color:var(--red);margin-left:3px">▲${Math.round((ratio-1)*100)}%</span>`;
+        } else if(ratio<0.7){
+          cellStyle += ';background:#E1F5EE33;border-radius:3px';
+          badge = `<span style="font-size:9px;color:var(--green);margin-left:3px">▼${Math.round((1-ratio)*100)}%</span>`;
+        }
+      }
+      h += `<td style="${cellStyle}">${v?fmt(v)+'</td>':'—</td>'}`.replace('</td>',badge+'</td>');
+    });
+    h += `<td style="text-align:right;font-size:11px;font-weight:500">${fmt(acctTotal)}</td>
+          <td style="text-align:right;font-size:11px;color:var(--tx2)">${fmtM(acctAvg)}</td>
+          </tr>`;
+  });
+
+  // 월별 합계 행
+  h += `<tr class="tr-total"><td>월 합계</td>`;
+  months.forEach(m=>{h+=`<td style="text-align:right;font-size:11px">${fmt(moTotal[m])}</td>`;});
+  h += `<td style="text-align:right;font-size:11px;font-weight:500">${fmt(grandTotal)}</td>
+        <td style="text-align:right;font-size:11px">${fmtM(avgMo)}</td></tr>`;
+  h += '</tbody>';
+  tbl.innerHTML = h;
 }
+
+let sellChartMode = 'abs';
+function setSellChartMode(mode, btn){
+  sellChartMode = mode;
+  document.querySelectorAll('#tab-sell .ctab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderSell();
+}
+
 
 // ── ⑤ 가마감 비교 ────────────────────────────────────
 function renderCompare(){
