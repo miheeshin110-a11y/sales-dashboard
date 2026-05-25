@@ -433,10 +433,10 @@ const CLIENT_MAP={
 };
 
 const SYNTH={
-  '1월':{판관비:-363391095,택배비:0,개런티:-35168121,샘플개런티:-89500,샘플:-3556597},
-  '2월':{판관비:-355664474,택배비:0,개런티:-30747407,샘플개런티:-157700,샘플:-3037292},
-  '3월':{판관비:-310560195,택배비:0,개런티:-39362797,샘플개런티:-196000,샘플:-4784072},
-  '4월':{판관비:-271089903,택배비:-109727852,개런티:-25634427,샘플개런티:-59600,샘플:-2404350},
+  '1월':{판관비:-241799453,택배비:-121591642,개런티:-35168121,샘플개런티:-89500,샘플:-3556597},
+  '2월':{판관비:-238225963,택배비:-117438511,개런티:-30747407,샘플개런티:-157700,샘플:-3037292},
+  '3월':{판관비:-186386118,택배비:-124174077,개런티:-39362797,샘플개런티:-196000,샘플:-4784072},
+  '4월':{판관비:-161362051,택배비:-109727852,개런티:-25634427,샘플개런티:-59600,샘플:-2404350},
 };
 
 let RAW=[],DAILY=[],SELL_RAW=[],SELL_DETAIL=[];
@@ -1272,48 +1272,6 @@ function renderCompare(){
 }
 function setCmpMo(mo){cmpMo=mo;renderCompare();}
 
-
-function openSellDetail(acct) {
-  const months = getMonths();
-  const detail = SELL_DETAIL.filter(d=>d.acct===acct);
-  if(detail.length === 0) {
-    alert(acct + ' 세부 데이터가 없습니다.');
-    return;
-  }
-  document.getElementById('sell-detail-title').textContent = acct + ' — 건별 거래내역';
-  document.getElementById('sell-detail-card').style.display = '';
-
-  // 월별로 그룹핑
-  const byMo = {};
-  detail.forEach(d=>{
-    if(!byMo[d.month]) byMo[d.month]=[];
-    byMo[d.month].push(d);
-  });
-
-  let h = '<thead><tr><th>월</th><th>날짜</th><th>거래처</th><th style="text-align:right">금액</th><th>내역</th></tr></thead><tbody>';
-  const sortedMos = Object.keys(byMo).sort((a,b)=>parseInt(a)-parseInt(b));
-  sortedMos.forEach(mo=>{
-    const rows = byMo[mo];
-    const moTotal = rows.reduce((s,r)=>s+r.amount,0);
-    h+=`<tr class="tr-head"><td colspan="5">${mo} — ${rows.length}건 / 합계 ${fmt(moTotal)}</td></tr>`;
-    rows.forEach(r=>{
-      h+=`<tr>
-        <td style="font-size:11px;color:var(--tx2)">${r.month}</td>
-        <td style="font-size:11px">${r.date}</td>
-        <td style="font-size:11px">${r.vendor}</td>
-        <td style="text-align:right;font-size:11px" class="${r.amount<0?'neg':''}">${fmt(r.amount)}</td>
-        <td style="font-size:11px;color:var(--tx2)">${r.detail}</td>
-      </tr>`;
-    });
-  });
-  h+='</tbody>';
-  document.getElementById('tb-sell-detail').innerHTML = h;
-  document.getElementById('sell-detail-card').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function closeSellDetail() {
-  document.getElementById('sell-detail-card').style.display = 'none';
-}
 
 loadData();
 // 10분마다 자동 데이터 갱신
