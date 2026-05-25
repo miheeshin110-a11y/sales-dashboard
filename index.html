@@ -697,10 +697,11 @@ function renderAll(){
   try{
     renderOv();
     renderForecast();
-    if(curTab==='media')renderCat();
-    else if(curTab==='matrix')renderMatrix();
-    else if(curTab==='sell')renderSell();
-    else if(curTab==='compare')renderCompare();
+    renderCompare();
+    renderSell();
+    renderMatrix();
+    // 매체별은 드릴다운 상태 유지 위해 현재 탭일 때만
+    if(curTab==='media') renderCat();
   }catch(renderErr){
     console.error('renderAll 오류:', renderErr);
     document.getElementById('status-dot').style.background='var(--red)';
@@ -1173,7 +1174,7 @@ function openSellDetail(acct, month){
 
     // 첫 번째 월은 기본으로 열기
     const firstMoId = 'mo-sec-'+sortedMos[0].replace(/[^0-9]/g,'');
-    h += `<script>setTimeout(()=>toggleMoSec('${firstMoId}'),50)<\/script>`;
+    window._firstMoId = firstMoId;
 
   } else {
     h = `<div style="padding:16px;text-align:center;color:var(--tx2);font-size:12px">
@@ -1183,6 +1184,8 @@ function openSellDetail(acct, month){
 
   document.getElementById('tb-sell-detail').innerHTML = h;
   card.scrollIntoView({behavior:'smooth',block:'start'});
+  // 첫 번째 월 자동 열기
+  if(window._firstMoId) setTimeout(()=>{ toggleMoSec(window._firstMoId); window._firstMoId=null; }, 100);
 }
 
 function toggleMoSec(id){
@@ -1313,6 +1316,10 @@ function closeSellDetail() {
 }
 
 loadData();
+// 10분마다 자동 데이터 갱신
+setInterval(()=>{
+  loadData();
+}, 10 * 60 * 1000);
 </script>
 </body>
 </html>
