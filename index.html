@@ -643,6 +643,55 @@ async function loadData(){
   }
 }
 
+
+function renderForecast() {
+  const months = getMonths();
+  const n = months.length;
+  const kpiEl = document.getElementById('forecast-kpis');
+  const descEl = document.getElementById('forecast-desc');
+  const labelEl = document.getElementById('forecast-mo-label');
+  if(!kpiEl || n===0) return;
+
+  const totRev = months.reduce((s,m)=>s+getTotalRev(m),0);
+  const totFP  = months.reduce((s,m)=>s+getFP(m),0);
+  const avgRev = totRev / n;
+  const avgFP  = totFP  / n;
+  const remaining = 12 - n;
+  const projectedFP  = totFP  + avgFP  * remaining;
+  const projectedRev = totRev + avgRev * remaining;
+  const neededMonthlyFP  = remaining > 0 ? (0 - totFP) / remaining : 0;
+  const curFPrate = totRev > 0 ? totFP / totRev : 0;
+  const neededMonthlyRev = curFPrate !== 0 ? Math.abs(neededMonthlyFP / curFPrate) : 0;
+
+  if(labelEl) labelEl.textContent = months[0]+'~'+months[n-1]+' 실적 기준 · 잔여 '+remaining+'개월';
+
+  kpiEl.innerHTML = `
+    <div class="kpi">
+      <div class="kl">1~${n}월 누적 영업이익</div>
+      <div class="kv ${totFP>=0?'pos':'neg'}">${fmtM(totFP)}</div>
+      <div class="ks">누적 매출 ${fmtM(totRev)}</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">현 추세 연간 전망</div>
+      <div class="kv ${projectedFP>=0?'pos':'neg'}">${fmtM(projectedFP)}</div>
+      <div class="ks">예상 매출 ${fmtM(projectedRev)}</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">BEP 위해 월 필요 이익</div>
+      <div class="kv" style="color:var(--amber)">${remaining>0?'+'+fmtM(neededMonthlyFP):'달성'}</div>
+      <div class="ks">잔여 ${remaining}개월 균등 기준</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">BEP 위해 월 필요 매출</div>
+      <div class="kv" style="color:var(--amber)">${remaining>0?fmtM(neededMonthlyRev):'—'}</div>
+      <div class="ks">현 이익률(${pct(curFPrate*100)}) 유지 기준</div>
+    </div>`;
+
+  if(descEl) descEl.innerHTML = projectedFP>=0
+    ? `현 추세 유지 시 연간 흑자 전환 가능합니다. 월평균 매출 ${fmtM(avgRev)}, 월평균 이익 ${fmtM(avgFP)} 기준입니다.`
+    : `현 추세 유지 시 연간 적자 <strong>${fmtM(Math.abs(projectedFP))}</strong> 예상됩니다. BEP 달성을 위해 잔여 ${remaining}개월간 매월 매출 <strong>${fmtM(neededMonthlyRev)}</strong> 이상, 영업이익 <strong>+${fmtM(neededMonthlyFP)}</strong> 이상 필요합니다.`;
+}
+
 function renderAll(){
   try{
     renderOv();
