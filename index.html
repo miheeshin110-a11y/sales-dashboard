@@ -581,16 +581,28 @@ function showTab(name,el){
 }
 
 // ── 데이터 로드 ──────────────────────────────────────
+async function fetchOne(type){
+  const url=APPS_SCRIPT_URL+'?type='+type+'&t='+Date.now();
+  const res=await fetch(url);
+  const data=await res.json();
+  if(data.error) throw new Error(type+' 오류: '+data.error);
+  return data;
+}
+
 async function loadData(){
   try{
-    const url=APPS_SCRIPT_URL+'?type=all&t='+Date.now();
-    const res=await fetch(url);
-    const data=await res.json();
-    if(data.error) throw new Error(data.error);
-    RAW=(data.confirmed||[]).map(r=>({month:r.month,media:normCat(r.media),client:r.client,rev:r.rev||0,buy:r.buy||0,ad:r.ad||0,ppl:r.ppl||0,rg:r.rg||0})).map(nc);
-    DAILY=data.daily||[];
-    SELL_RAW=data.selling||[];
-    SELL_DETAIL=data.selling_detail||[];
+    // 4개 병렬 호출
+    const [confirmed,daily,selling,selling_detail]=await Promise.all([
+      fetchOne('confirmed'),
+      fetchOne('daily'),
+      fetchOne('selling'),
+      fetchOne('selling_detail'),
+    ]);
+    RAW=(confirmed||[]).map(r=>({month:r.month,media:normCat(r.media),client:r.client,rev:r.rev||0,buy:r.buy||0,ad:r.ad||0,ppl:r.ppl||0,rg:r.rg||0})).map(nc);
+    DAILY=daily||[];
+    SELL_RAW=selling||[];
+    SELL_DETAIL=selling_detail||[];
+    const data={updated:new Date().toISOString()};
     const months=getMonths();
     selMo=new Set(months);
     cmpMo=months[months.length-1];
