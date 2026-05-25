@@ -433,10 +433,10 @@ const CLIENT_MAP={
 };
 
 const SYNTH={
-  '1월':{판관비:-241799453,택배비:-121591642,개런티:-35168121,샘플개런티:-89500,샘플:-3556597},
-  '2월':{판관비:-238225963,택배비:-117438511,개런티:-30747407,샘플개런티:-157700,샘플:-3037292},
-  '3월':{판관비:-186386118,택배비:-124174077,개런티:-39362797,샘플개런티:-196000,샘플:-4784072},
-  '4월':{판관비:-161362051,택배비:-109727852,개런티:-25634427,샘플개런티:-59600,샘플:-2404350},
+  '1월':{판관비:-363391095,택배비:0,개런티:-35168121,샘플개런티:-89500,샘플:-3556597,택배비표시:-121591642},
+  '2월':{판관비:-355664474,택배비:0,개런티:-30747407,샘플개런티:-157700,샘플:-3037292,택배비표시:-117438511},
+  '3월':{판관비:-310560195,택배비:0,개런티:-39362797,샘플개런티:-196000,샘플:-4784072,택배비표시:-124174077},
+  '4월':{판관비:-271089903,택배비:-109727852,개런티:-25634427,샘플개런티:-59600,샘플:-2404350,택배비표시:-109727852},
 };
 
 let RAW=[],DAILY=[],SELL_RAW=[],SELL_DETAIL=[];
@@ -1216,6 +1216,7 @@ function renderCompare(){
   const co_ad=RAW.filter(r=>r.month===cmpMo&&!['종합','판관비'].includes(r.media)).reduce((s,r)=>s+r.ad,0);
   const co_ppl=RAW.filter(r=>r.month===cmpMo&&!['종합','판관비'].includes(r.media)).reduce((s,r)=>s+r.ppl,0);
   const co_sell=Math.abs(sy.판관비||0)+Math.abs(sy.택배비||0);
+  const co_taxi=Math.abs(sy.택배비표시||sy.택배비||0);
   const dRev=co_rev-ga.rev,dAd=-(co_ad-ga.ad),dPpl=-(co_ppl-ga.ppl);
   const dSell=-(co_sell-ga.sell),dRg=sy.개런티||0,dSamp=(sy.샘플개런티||0)+(sy.샘플||0);
   const dTotal=co_profit-ga.profit;
@@ -1250,8 +1251,8 @@ function renderCompare(){
       <tr><td>총매출</td><td style="text-align:right;font-size:11px">${fmt(ga.rev)}</td><td style="text-align:right;font-size:11px">${fmt(co_rev)}</td><td style="text-align:right;font-size:11px;${dc(dRev)}">${df(dRev)}</td></tr>
       <tr><td>광고비</td><td style="text-align:right;font-size:11px">${fmt(ga.ad)}</td><td style="text-align:right;font-size:11px">${fmt(co_ad)}</td><td style="text-align:right;font-size:11px;${dc(-dAd)}">${df(co_ad-ga.ad)}</td></tr>
       <tr><td>PPL</td><td style="text-align:right;font-size:11px">${fmt(ga.ppl)}</td><td style="text-align:right;font-size:11px">${fmt(co_ppl)}</td><td style="text-align:right;font-size:11px;${dc(-dPpl)}">${df(co_ppl-ga.ppl)}</td></tr>
-      <tr><td>순수 판관비</td><td style="text-align:right;font-size:11px">${fmt(ga.sell)}</td><td style="text-align:right;font-size:11px">${fmt(Math.abs(sy.판관비||0))}</td><td style="text-align:right;font-size:11px">${df(Math.abs(sy.판관비||0)-ga.sell)}</td></tr>
-      <tr class="tr-sub"><td style="padding-left:14px;color:var(--tx2)">└ 택배비</td><td style="text-align:right;color:var(--tx2)">원가포함</td><td style="text-align:right;font-size:11px">${fmt(Math.abs(sy.택배비||0))}</td><td></td></tr>
+      <tr><td>순수 판관비</td><td style="text-align:right;font-size:11px">${fmt(ga.sell)}</td><td style="text-align:right;font-size:11px">${fmt(Math.abs(sy.판관비||0)-co_taxi)}</td><td style="text-align:right;font-size:11px">${df(Math.abs(sy.판관비||0)-ga.sell)}</td></tr>
+      <tr class="tr-sub"><td style="padding-left:14px;color:var(--tx2)">└ 택배비</td><td style="text-align:right;color:var(--tx2)">원가포함</td><td style="text-align:right;font-size:11px">${fmt(Math.abs(sy.택배비표시||sy.택배비||0))}</td><td></td></tr>
       <tr class="tr-sub"><td style="padding-left:14px;color:var(--tx2)">└ 러닝개런티</td><td style="text-align:right;color:var(--tx2)">원가포함</td><td style="text-align:right;font-size:11px">${fmt(Math.abs(sy.개런티||0))}</td><td style="text-align:right;font-size:11px;color:var(--red)">${df(dRg)}</td></tr>
       <tr class="tr-sub"><td style="padding-left:14px;color:var(--tx2)">└ 샘플·샘플개런티</td><td style="text-align:right;color:var(--tx2)">—</td><td style="text-align:right;font-size:11px">${fmt(Math.abs((sy.샘플개런티||0)+(sy.샘플||0)))}</td><td style="text-align:right;font-size:11px;color:var(--red)">${df(dSamp)}</td></tr>
       <tr class="tr-total"><td>영업이익</td><td style="text-align:right;font-size:11px" class="${ga.profit>=0?'pos':'neg'}">${fmt(ga.profit)}</td><td style="text-align:right;font-size:11px" class="${co_profit>=0?'pos':'neg'}">${fmt(co_profit)}</td><td style="text-align:right;font-size:11px" class="${dTotal>=0?'pos':'neg'}">${df(dTotal)}</td></tr>
