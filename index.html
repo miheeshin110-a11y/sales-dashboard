@@ -437,6 +437,7 @@ const SYNTH={
   '2월':{판관비:-355664474,택배비:0,개런티:-30747407,샘플개런티:-157700,샘플:-3037292,택배비표시:-117438511},
   '3월':{판관비:-310560195,택배비:0,개런티:-39362797,샘플개런티:-196000,샘플:-4784072,택배비표시:-124174077},
   '4월':{판관비:-271089903,택배비:-109727852,개런티:-25634427,샘플개런티:-59600,샘플:-2404350,택배비표시:-109727852},
+  '5월':{판관비:-1622872160,택배비:0,개런티:-40016891,샘플개런티:-99333,샘플:-3606548,간접부자재:-16634000,택배비표시:-175128975},
 };
 
 let RAW=[],DAILY=[],SELL_RAW=[],SELL_DETAIL=[];
@@ -460,8 +461,7 @@ function nc(r){return{...r,client:CLIENT_MAP[r.client]||r.client}}
 function getMonths(){return[...new Set(RAW.map(r=>r.month))].sort((a,b)=>parseInt(a)-parseInt(b))}
 function getMP(mo){return RAW.filter(r=>r.month===mo&&!['종합','판관비'].includes(r.media)).reduce((s,r)=>s+profFn(r),0)}
 function getTotalRev(mo){return RAW.filter(r=>r.month===mo&&!['종합','판관비'].includes(r.media)).reduce((s,r)=>s+r.rev,0)}
-function getFP(mo){const s=SYNTH[mo];if(!s)return getMP(mo);return getMP(mo)+s.판관비+(s.택배비||0)+s.개런티+s.샘플개런티+s.샘플}
-
+function getFP(mo){const s=SYNTH[mo];if(!s)return getMP(mo);return getMP(mo)+s.판관비+(s.택배비||0)+s.개런티+s.샘플개런티+s.샘플+(s.간접부자재||0)}
 // ── 메모 시스템 ──────────────────────────────────────
 function memoKey(mo,section){return mo+'::'+section}
 
@@ -561,7 +561,7 @@ function setMemoFilter(f){memoFilter=f;renderMemoList();}
 
 // ── 탭 전환 ──────────────────────────────────────────
 const TAB_TITLES={ov:'전체 월별',media:'매체별',matrix:'카테고리×월별',sell:'판관비',compare:'가마감 비교',memos:'담당자 메모'};
-const TAB_BADGES={ov:'2026년 1~4월 누적',media:'카테고리 → 거래처 드릴다운',matrix:'이익률 히트맵',sell:'판관비·택배비·개런티 분해',compare:'확정마감 기준',memos:'전체 메모 관리'};
+const TAB_BADGES={ov:'2026년 1~5월 누적',media:'카테고리 → 거래처 드릴다운',matrix:'이익률 히트맵',sell:'판관비·택배비·개런티 분해',compare:'확정마감 기준',memos:'전체 메모 관리'};
 
 function showTab(name,el){
   curTab=name;
